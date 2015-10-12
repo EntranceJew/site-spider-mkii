@@ -31,11 +31,13 @@ var RESULTS_TITLE = 'Site Spider Results';
  * @type {Array.<string>}
  */
 var SPIDER_MIME = ['text/html', 'text/plain', 'text/xml'];
+var DOWNLOAD_MIME = ['image', 'video'];
 
 var popupDoc = null;
 var allowedText = '';
 var allowedRegex = null;
 var allowPlusOne = false;
+var allowDownloadMimes = false;
 var allowArguments = false;
 var checkInline = false;
 var checkScripts = false;
@@ -64,6 +66,14 @@ var currentRequest ={
 function popupLoaded(doc) {
     popupDoc = doc;
     chrome.tabs.getSelected(null, setDefaultUrl_);
+}
+
+function downloadURI(uri, name) {
+    var link = document.createElement("a");
+    link.download = name;
+    link.href = uri;
+    link.click();
+    //link.parentNode.removeChild(link);
 }
 
 /**
@@ -103,6 +113,7 @@ function setDefaultUrl_(tab) {
 
     // Restore previous setting for checkboxes.
     popupDoc.getElementById('plusone').checked = allowPlusOne;
+    popupDoc.getElementById('downloadmimes').checked = allowDownloadMimes;
     popupDoc.getElementById('arguments').checked = !allowArguments;
     popupDoc.getElementById('inline').checked = checkInline;
     popupDoc.getElementById('scripts').checked = checkScripts;
@@ -157,6 +168,7 @@ function popupGo() {
 
     // Save settings for checkboxes.
     allowPlusOne = popupDoc.getElementById('plusone').checked;
+    allowDownloadMimes = popupDoc.getElementById('downloadmimes').checked;
     allowArguments = !popupDoc.getElementById('arguments').checked;
     checkInline = popupDoc.getElementById('inline').checked;
     checkScripts = popupDoc.getElementById('scripts').checked ;
@@ -338,6 +350,14 @@ function httpRequestChange() {
         }
     }
 
+    var doDownload = false;
+    for (var x = 0; x < DOWNLOAD_MIME.length; x++) {
+        if (mime.indexOf(DOWNLOAD_MIME[x]) != -1) {
+            doDownload = true;
+            break;
+        }
+    }
+
     // If this is a redirect or an HTML page, open it in a new tab and
     // look for links to follow.  Otherwise, move on to next page.
     if (currentRequest.requestedURL.match(allowedRegex) &&
@@ -348,9 +368,16 @@ function httpRequestChange() {
             url: currentRequest.requestedURL,
             selected: false
         }, spiderLoadCallback_);
+    } else if (doDownload && allowDownloadMimes){
+        downloadURI(currentRequest.requestedURL, currentRequest.requestedURL);
+
+        currentRequest.returnedURL = "Downloaded "+mime;
+        recordPage(currentRequest);
+
+        window.setTimeout(spiderPage, 1);
     } else {
         // Close this page and mark done.
-        currentRequest.returnedURL ="Skipped";
+        currentRequest.returnedURL = "Skipped "+mime;
         recordPage(currentRequest);
 
         window.setTimeout(spiderPage, 1);
