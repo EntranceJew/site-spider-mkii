@@ -96,7 +96,7 @@ function setDefaultUrl_(tab) {
     }
     // Sanitize regex characters in URL.
     allowedText =
-    allowedText.replace(/([\^\$\.\*\+\?\=\!\:\|\\\(\)\[\]\{\}])/g,
+    allowedText.replace(/([\^\$\.\*\+\?\=\!\:\|\\\(\)\[\]\{\}\/])/g,
         '\\$1');
     allowedText = '^' + allowedText;
     popupDoc.getElementById('regex').value = allowedText;
